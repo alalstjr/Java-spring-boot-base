@@ -2,11 +2,19 @@
 # Spring 입문 노트
 --------------------
 
-# 목치
+# 목차
 
 - [1. 실행 구조 파악](#실행-구조-파악)
     - [1-1. Log 표시 설정](#Log-표시-설정)
     - [1-2. DEBUG Log 확인](#DEBUG-Log-확인)
+- [2. 과제](#과제)
+    - [2-1. LastName이 아니라 firstName 으로 검색](1.-LastName이-아니라-firstName-으로-검색)
+    - [2-2. 정확한 일치가 아닌 키워드가 포함되도 검색](2.-정확한-일치가-아닌-키워드가-포함되도-검색)
+    - [2-3. Owns에 age 추가](3.-Owns에-age-추가)
+- [3. Inversion of Control IOC](#Inversion-of-Control)
+- [4. Bean IoC 컨테이너가 관리하는 객체](#Bean)
+    - [4-1. Spring 컨테이너에 인스턴스를 Bean 등록 방법](#Spring-컨테이너에-인스턴스를-Bean-등록-방법)
+- [5. 의존성 주입 (Dependency Injection)](#의존성-주입-(Dependency-Injection))
 
 # 초기 설정
 
@@ -266,3 +274,200 @@ Last Name 을 설정하는 것이 아닌 GET FORM 으로 받은 First Name 값�
 ~~~
 
 정상적으로 firstName 값을 가져오며 검색되는 것을 확인할 수 있었습니다.
+
+## 2. 정확한 일치가 아닌 키워드가 포함되도 검색
+
+First Name 값 중 Name 만 쳐도 해당 이름을 가진 모든 값을 찾도록 하겠습니다. <br/>
+간단하게 쿼리문만 추가 작성하면 됩니다.
+
+> OwnerRepository.java
+
+Like :firstName%
+
+여러개의 검색 조건이 필요한 경우 Like 문법과 % 기호를 양쪽에 넣어주면 됩니다.
+
+[Mysql like 사용법](https://webisfree.com/2014-01-28/[mysql]-%ED%95%84%EB%93%9C%EC%97%90%EC%84%9C-%ED%8A%B9%EC%A0%95%EB%AC%B8%EC%9E%90-%ED%8F%AC%ED%95%A8-%EB%98%90%EB%8A%94-%EC%A0%9C%EC%99%B8%ED%95%9C-db-%EA%B2%80%EC%83%89-like-not)
+
+## 3. Owns에 age 추가
+
+> Owner.java
+
+Integer age 값과 getter, setter 를 추가해주고 사용자에게 age 값을 입력 받을 수 있도록
+
+~~~
+private Integer age;
+
+public Integer getAge() {
+    return age;
+}
+
+public void setAge(Integer age) {
+    this.age = age;
+}
+~~~
+
+> createOrUpdateOwnerForm.html
+
+input 값 age 를 추가 해줍니다.
+
+~~~
+<input th:replace="~{fragments/inputField :: input ('Age', 'age', 'text')}" />
+~~~ 
+
+> src/main/java/resources/db/hsqldb/schema.sql
+
+schema 값에 age 값을 db에 추가합니다.
+
+~~~
+...
+CREATE TABLE owners (
+  id         INTEGER IDENTITY PRIMARY KEY,
+  first_name VARCHAR(30),
+  last_name  VARCHAR_IGNORECASE(30),
+  address    VARCHAR(255),
+  city       VARCHAR(80),
+  telephone  VARCHAR(20),
++ age        VARCHAR(150)
+);
+...
+~~~
+
+하지만 아직 실행을 하면 에러가 발생합니다. 그 이유는
+
+> src/main/java/resources/db/hsqldb/data.sql
+
+데이터 값을 추가할때 제가 age 추가한 컬럼을 포함하지 않은 상태로 초기 data가 추가되기 때문에
+컴퓨터는 추가된 age 컬럼을 인식하지 못하여 발생한 오류입니다.
+추가되는 data 값에 age를 추가해 줍니다.  
+
+Owner List, details 에서 age 값을 확인 할 수 있도록 수정합니다.
+
+> ownersList.html
+
+~~~
+<td th:text="${owner.age}"/>
+~~~  
+
+> ownersDetails.html
+
+~~~
+<tr>
+    <th>Age</th>
+    <td th:text="*{age}" /></td>
+</tr>
+~~~
+
+# Inversion of Control
+
+일반적인 (의존성에 대한) 제어권 : 내가 사용할 의존성은 내가 만든다.
+
+~~~
+class Controller {
+    private Rrepository repository = new Repository(); 
+}
+~~~
+
+의존성의 제어권이 Inversion(역전) 된다고 생각하면 의존성의 제어권을 자기 자신이 가지고 있었는데
+
+- Ioc "내가 사용할 의존성을 누군가 알아서 주겠지"
+    - 내가 사용할 의존성의 타입(또는 인터페이스)만 맞으면 어떤거든 상관없다.
+    - 그래야 내 코드 테스트 하기도 편하지.
+    
+~~~
+class Controller {
+    private Rrepository repository;
+
+    public Controller(Rrepository repository) {
+        this.repository = repository;
+    }
+}
+~~~
+
+Controller 에서 repository 를 사용을 하지만 해당 클래스에서 만들어 사용하지 않습니다. <br/>
+다른 곳에서 repository 객체를 생성하여 Controller 에게 생성자를 통해서 받아와 사용합니다.  <br/>
+이렇게 되면 의존성을 만드는 일은 Controller 에서 하지 않고 누군가 밖에서 의존성 관리를 해줍니다. <br/> 
+의존성을 주입해 주는것을 `Defence Injection` 이라 부르고 이 자체를 `Inversion of Control` 입니다.
+
+## Inversion of Control IOC 컨테이너 란?
+
+빈(Bean)을 만들고 의존성을 엮어주며 제공해준다.
+
+여러가지 방법으로 등록된 Bean들은 서로간의 의존성 주입을 Spring IOC 컨테이너가 알아서 해줍니다. <br/>
+의존성 주입은 빈(Bean) 끼리만 가능합니다. <br/>
+즉 Spring IOC 컨테이너 안에 들어있는 객체들 끼리만 의존성 주입을 해줄 수 있습니다.
+
+# Bean
+
+~~~
+1. Controller controller = new Controller();
+
+2. Controller bean = applicationContext.getBean(Controller.class);
+~~~
+
+- 1. 첫번째 Controller 객체는 Bean 이 아닙니다. 직접 생성한 객체이기 때문입니다. applicationContext 관련 없습니다.
+- 2. 두번째 Controller 객체는 applicationContext 가 관리하는 객체에서 가져온것임으로 Bean 이 맞습니다.
+
+Spring 에서의 `Bean 은 applicationContext 가 관리하는 객체`를 의미합니다.
+
+## Spring 컨테이너에 인스턴스를 Bean 등록 방법
+
+- 1. Component Scanning
+    - @Component
+        - @Repository
+        - @Service
+        - @Controller
+    - 또는 직접 일일히 XML이나 자바 설정 파일에 등록
+
+- 2. 어떻게 꺼내쓰지?
+    - @Autowired 또는 @Inject
+    - 또는 applicationContext에서 getBean()으로 직접 꺼내 쓴다.
+
+- 특징 
+    - 오로지 Bean 들로만 의존성 주입을 해준다.
+    
+> /Application/SpringBootApplication
+
+@SpringBootApplication 어노테이션 내부에 
+
+~~~
+@ComponentScan(
+    excludeFilters = {@Filter(
+    type = FilterType.CUSTOM,
+    classes = {TypeExcludeFilter.class}
+), @Filter(
+    type = FilterType.CUSTOM,
+    classes = {AutoConfigurationExcludeFilter.class}
+)}
+)
+~~~
+
+ComponentScan 이라는 어노테이션이 존재합니다.
+ComponentScan 부터 모든 하위 클래스를 컴포넌트를 찾아보라고 해당 어노테이션은 알려줍니다.
+
+# 의존성 주입 (Dependency Injection)
+
+- @Autowired / @Inject를 어디에 사용하나
+    - 생성자
+    - 필드
+    - Setter
+
+Spring 프레임워크 레퍼런스에서 권장하는 방법은 `생성자` 입니다.
+
+~~~
+class Controller {
+    private final Repository owners;
+
+    public Controller(Repository service) {
+        this.owners = service;
+    }
+}
+~~~
+
+필수적으로 사용해야 하는 레퍼런스 생성자(의존성) 없이는 
+Controller 인스턴스 클래스를 만들 수 없도록 강제 할 수 있습니다.
+Controller 인스턴스 클래스는 Repository owners 클래스가 없다면 작동하지 않는 클래스 입니다.
+Repository owners 클래스는 Controller 인스턴스에 반드시 존재해야 하는 객체입니다.
+
+# AOP (Aspect Oriented Programming) 소개
+
+흩어진 코드를 한 곳으로 모아
