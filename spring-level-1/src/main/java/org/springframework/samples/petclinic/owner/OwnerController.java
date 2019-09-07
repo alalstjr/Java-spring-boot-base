@@ -89,6 +89,7 @@ class OwnerController {
 
         // find owners by last name
         Collection<Owner> results = this.owners.findByFirstName(owner.getFirstName());
+        log.info("결과 - {}", results);
         if (results.isEmpty()) {
             // no owners found
             result.rejectValue("FirstName", "notFound", "not found");

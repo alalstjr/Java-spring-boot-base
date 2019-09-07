@@ -26,8 +26,12 @@
         <th>Telephone</th>
         <td th:text="*{telephone}" /></td>
       </tr>
+      <tr>
+        <th>Age</th>
+        <td th:text="*{age}" /></td>
+      </tr>
     </table>
-  
+
     <a th:href="@{{id}/edit(id=${owner.id})}" class="btn btn-default">Edit
       Owner</a>
     <a th:href="@{{id}/pets/new(id=${owner.id})}" class="btn btn-default">Add
