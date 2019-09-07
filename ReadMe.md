@@ -22,6 +22,7 @@
 
 - [6. AOP (Aspect Oriented Programming) 소개](#AOP-(Aspect-Oriented-Programming)-소개)
     [6-1. 다양한 AOP구현 방법](#다양한-AOP구현-방법)
+    [6-2. 프록시 패턴](#다양한-프록시패턴구현-방법)
 
 # 초기 설정
 
@@ -581,4 +582,6 @@ stopWatch 메서드가 공통적으로 들어갑니다.
 
 - 프록시 패턴 (스프링 AOP)
     - refactoring.guru/design-patterns/proxy
+
+## 다양한-프록시패턴구현-방법
 
