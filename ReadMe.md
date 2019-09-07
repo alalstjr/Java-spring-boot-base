@@ -7,14 +7,21 @@
 - [1. 실행 구조 파악](#실행-구조-파악)
     - [1-1. Log 표시 설정](#Log-표시-설정)
     - [1-2. DEBUG Log 확인](#DEBUG-Log-확인)
+
 - [2. 과제](#과제)
     - [2-1. LastName이 아니라 firstName 으로 검색](1.-LastName이-아니라-firstName-으로-검색)
     - [2-2. 정확한 일치가 아닌 키워드가 포함되도 검색](2.-정확한-일치가-아닌-키워드가-포함되도-검색)
     - [2-3. Owns에 age 추가](3.-Owns에-age-추가)
+
 - [3. Inversion of Control IOC](#Inversion-of-Control)
+
 - [4. Bean IoC 컨테이너가 관리하는 객체](#Bean)
     - [4-1. Spring 컨테이너에 인스턴스를 Bean 등록 방법](#Spring-컨테이너에-인스턴스를-Bean-등록-방법)
+
 - [5. 의존성 주입 (Dependency Injection)](#의존성-주입-(Dependency-Injection))
+
+- [6. AOP (Aspect Oriented Programming) 소개](#AOP-(Aspect-Oriented-Programming)-소개)
+    [6-1. 다양한 AOP구현 방법](#다양한-AOP구현-방법)
 
 # 초기 설정
 
@@ -471,3 +478,107 @@ Repository owners 클래스는 Controller 인스턴스에 반드시 존재해야
 # AOP (Aspect Oriented Programming) 소개
 
 흩어진 코드를 한 곳으로 모아
+
+~~~
+class A {
+    method a () {
+        AAAA
+        클래스 A의 a 메서드 내용입니다.
+        BBBB
+    }
+
+    method b () {
+        AAAA
+        클래스 A의 b 메서드 내용입니다.
+        BBBB
+    }
+}
+
+class B {
+    method c () {
+        AAAA
+        클래스 B의 c 메서드 내용입니다.
+        BBBB
+    }
+}
+~~~
+
+흩어진 AAAA 와 BBBB 코드가 존재한다고 한다면 처음에는 아무런 이상이 없습니다.
+다만 `A 클래스의 a 메서드 (AAAA)` 값이 변경 된다고 하면 흩어진 모든 메서드의 (AAAA) 값이
+변경되는 상황이 발생합니다. 이렇게 되면 발생하는 문제는 해당 클래스에만 존재하는 것이 아닌
+다른 클래스에도 존재할 경우도 있기 때문에 전체적으로 영향을 끼칩니다.
+
+이를 해결하기 위해서 공통되는 코드를 따로 빼서 관리하는 것을 `AOP` 라고 합니다.
+
+~~~
+class A {
+    method a () {
+        클래스 A의 a 메서드 내용입니다.
+    }
+
+    method b () {
+        클래스 A의 b 메서드 내용입니다.
+    }
+}
+
+class B {
+    method c () {
+        클래스 C의 c 메서드 내용입니다.
+    }
+}
+
+class AAAABBBB() {
+    method aaaabbbb(Text text) {
+        AAAA
+        text.execute();
+        BBBB
+    }
+}
+~~~
+
+AOP 간단한 예제를 OwnerController.java 에서 확인해 보면
+
+java 코드의 속도 성능을 체크하는 메소드를 해당 클래스에서 공통적으로 사용한다고 하면
+
+~~~
+...
+@GetMapping("/owners/new")
+public String initCreationForm(Map<String, Object> model) {
+
+    StopWatch stopWatch = new StopWatch();
+    stopWatch.start();
+
+    Owner owner = new Owner();
+    model.put("owner", owner);
+
+    stopWatch.stop();
+    stopWatch.prettyPrint();
+
+    return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
+}
+...
+
+하위 메소드 들 전부에 
+
+StopWatch stopWatch = new StopWatch();
+stopWatch.start();
+
+stopWatch.stop();
+stopWatch.prettyPrint();
+
+stopWatch 메서드가 공통적으로 들어갑니다.
+
+이를 AOP 작업을 하겠습니다.
+~~~
+
+## 다양한 AOP구현 방법
+
+- 컴파일 A.java ---(AOP)---> A.class
+    - java 파일에는 중복되는 코드가 없지만 컴파일을 하면 class 에 중복코드를 넣어 컴파일 합니다. (AspectJ)
+
+- 바이트코드 조작 A.java -> A.class ---(AOP)---> 
+    - class 파일에는 아무것도 없지만 class를 로딩하는 해당 시점에 메모리에서 중복되는 코드를 조작하여 넣습니다. (AspectJ)
+
+- 프록시 패턴 (스프링 AOP)
+    - refactoring.guru/design-patterns/proxy
+
