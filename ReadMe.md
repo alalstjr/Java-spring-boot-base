@@ -23,6 +23,8 @@
 - [6. AOP (Aspect Oriented Programming) 소개](#AOP-(Aspect-Oriented-Programming)-소개)
     [6-1. 다양한 AOP구현 방법](#다양한-AOP구현-방법)
     [6-2. 프록시 패턴](#다양한-프록시패턴구현-방법)
+    [6-3. AOP 적용 예제](#AOP-적용-예제)
+- [7. PSA (Portable Service Abstraction) 소개](#PSA-(Portable-Service-Abstraction)-소개)
 
 # 초기 설정
 
@@ -585,3 +587,162 @@ stopWatch 메서드가 공통적으로 들어갑니다.
 
 ## 다양한-프록시패턴구현-방법
 
+> src/java/project/prox/Payment.interface
+
+~~~
+public interface Payment {
+    void pay(int amount);
+}
+~~~
+
+> src/java/project/prox/Store.java
+
+~~~
+public class Store {
+
+    Payment payment;
+
+    public Store(Payment payment) {
+        this.payment = payment;
+    }
+
+    public void butSomething(int amount) {
+        payment.pay(100);
+    }
+}
+~~~
+
+> src/java/project/prox/Cash.java
+
+~~~
+public class Cash implements Payment {
+
+    @Override
+    public void pay(int amount) {
+        System.out.println(amount + "현금 결제");
+    }
+}
+~~~
+
+> src/java/project/prox/CashPerf.java
+
+성능 측정 기능을 가지고 있는 Payment
+
+~~~
+public class CashPerf implements Payment {
+
+    Payment cash = new Cash();
+
+    @Override
+    public void pay(int amount) {
+
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        System.out.println(amount + "신용 카드");
+
+        stopWatch.stop();
+        System.out.println(stopWatch.prettyPrint());
+    }
+}
+~~~
+
+> StoreTest.java
+
+~~~
+public class StoreTest {
+
+    @Test
+    public void testPay() {
+        Payment cashPerf = new CashPerf();
+        Store store = new Store(cashPerf);
+        store.butSomething(100);
+    }
+
+}
+
+결과 
+
+100신용 카드
+StopWatch '': running time (millis) = 0
+-----------------------------------------
+ms     %     Task name
+-----------------------------------------
+00000  NaN  
+~~~
+
+성능 측정이 되는 Payment 를 가지고 있게 됩니다. <br/>
+Store 코드도 Cash 코드도 바뀐거 없이 성능 측정을하는 `CashPerf 프록시 코드`가 실행 되었습니다. <br/>
+기존 코드였다면 Payment cashPerf = new Cash(); 로 되어 성능 측정을 하지 않았을 것입니다. <br/>
+하지만 CashPerf 라는 프록시를 만들었기 때문에 클라이언트 코드가 프록시를 사용하도록 수정했기 때문입니다.<br/>
+Store 생성자에 Cash 가 아닌 CashPref를 담아서 생성해 줬기때문
+
+## AOP 적용 예제
+
+- @LogExecution Time 으로 메소드 처리 시간 로깅하기
+
+~~~
+...
++ @LogExecutionTime
+@GetMapping("/owners/find")
+public String initFindForm(Map<String, Object> model) {
+    model.put("owner", new Owner());
+    return "owners/findOwners";
+}
+...
+~~~
+
+메소드의 성능을 측하고 싶은곳에 LogExecutionTime 어노테이션을 붙입니다.
+그 후 해당 어노테이션을 만듭니다.
+
+~~~
+@Target(ElementType.METHOD)            
+@Retention(RetentionPolicy.RUNTIME)    
+public @interface LogExecutionTime {   
+                                       
+}                                      
+~~~
+
+해당 어노테이션을 동작시켜주는 클래스를 만들어줍니다.
+
+> LogAspect.java
+
+~~~
+@Component
+@Aspect
+public class LogAspect {
+
+    Logger log = LoggerFactory.getLogger(LogAspect.class);
+
+    @Around("@annotation(LogExeutionTime)")
+    public Object logExeutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        Object proceed = joinPoint.proceed();
+
+        stopWatch.stop();
+        System.out.println(stopWatch.prettyPrint());
+
+        return proceed;
+    }
+
+}
+~~~
+
+Bean 으로 등록되어야 하기 때문에 Componet가 등록 되어야 하고 Aspect또한 선언합니다.
+
+@Around 어노테이션을 선언한 메소드 안에서 ProceedingJoinPoint joinPoint 파라미터를 받을 수 있습니다.
+여기서 joinPoint 는 @LogExecutionTime 어노테이션이 선언된 메소드를 가리킵니다.
+그리고 joinPoint 를 실행을 하고 해당 결과를 return 합니다.
+
+# PSA (Portable Service Abstraction) 소개
+
+- 1. 스프링 트랜잭션
+    - @Transactional
+
+- 2. 스프링 웹 MVC
+    - @Controller | @ReuqestMapping
+
+- 3. 스프링 캐시
+    - @Cacheable | @CacheEvict
